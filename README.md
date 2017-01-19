@@ -5,6 +5,7 @@ Tested on python 2.7 -- Should run on python 3.x with minimal (if any) fixes.
 
 ## Required libraries
 * NEST: http://www.nest-simulator.org
+* NEURON: http://www.neuron.yale.edu/neuron/
 * h5py: http://www.h5py.org
 * Numpy: http://www.numpy.org
 
