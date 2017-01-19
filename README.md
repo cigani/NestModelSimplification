@@ -47,7 +47,7 @@ Note: You will need to modify the source somewhat to set paths for data. I have 
 
 Note: On the subject of goodness of fit. We are using DETERMINISTIC models, GIFFittingToolsBox uses MD (see report refrences) to calculate goodness of fit, this is NOT a appropriate metric for goodness for DETERMINISTIC models. Use Variance Exampled (see report) to assess the models fitting.  
 
-Visualization: If you wish to add visualization to ensure your data works please edit the scripts. In modelfit this can be done by removing comments from Line 76:`# myExp.plotTrainingSet()` && Line 77:` # myExp.plotTestSet()` this will allow you to visualize your generated data. Goodness of fit will automatically be visualized (and pushed to your terminal). If you wish to visualize the current (A good idea) this can be done very inexpensivly by either modifying `CurrentGenerator.py` with the following lines or writing a small pythong script with the same lines and importing CurrentGenerator:
+Visualization: If you wish to add visualization to ensure your data works please edit the scripts. In modelfit this can be done by removing comments from Line 76:`# myExp.plotTrainingSet()` && Line 77:` # myExp.plotTestSet()` this will allow you to visualize your generated data. Goodness of fit will automatically be visualized (and pushed to your terminal). If you wish to visualize the current (A good idea) this can be done very inexpensivly by either modifying `CurrentGenerator.py` with the following lines or writing a small python script with the same lines and importing CurrentGenerator:
 ```python
 current = CurrentGenerator(time=100000, optimize_flag=False)                         
 current_vector = [x for x in current.generate_current()]                                         
