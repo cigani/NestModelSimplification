@@ -2,7 +2,7 @@ import re
 import numpy as np
 import glob
 import h5py
-
+import os
 
 class Loader:
 
@@ -17,17 +17,14 @@ class Loader:
     Returns two arrays composed of [Voltage, Current, Time] for Train and
     Test"""
 
-    def __init__(self):
+    def __init__(self, simulator, **kwargs):
 
         # Path Setting
-        self.PATH_FLAT = '### FILL IN ###'
-        self.CELL_PATH = '### FILL IN ###'
-        self.TRAIN_PATH = '### FILL IN ###'
-        self.TEST_PATH = '### FILL IN ###'
-        self.TRAIN_DATA_PATH = glob.glob(self.PATH_FLAT + self.CELL_PATH +
-                                         self.TRAIN_PATH)
-        self.TEST_DATA_PATH = glob.glob(self.PATH_FLAT + self.CELL_PATH +
-                                        self.TEST_PATH)
+        self.simulator = simulator
+        self.TRAIN_DATA_PATH = kwargs.get('train_path', os.path.join(simulator.SIMULATION_PATH, "training"))
+        self.TEST_DATA_PATH = kwargs.get('test_path',  os.path.join(simulator.SIMULATION_PATH, "test"))
+        self.TRAIN_DATA_PATH = glob.glob(self.TRAIN_DATA_PATH)
+        self.TEST_DATA_PATH = glob.glob(self.TEST_DATA_PATH)
 
         try:
             assert self.TRAIN_DATA_PATH
