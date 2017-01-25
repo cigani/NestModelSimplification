@@ -228,9 +228,9 @@ class Simulator:
         self.rcurrent = np.array(self.recordings['current'])
         if not self.optimize:
             if train:
-                data_records(self.recordings, "Train")
+                data_records(self.recordings, os.path.join(self.SIMULATION_PATH, 'train'))
             else:
-                data_records(self.recordings, "Test")
+                data_records(self.recordings, os.path.join(self.SIMULATION_PATH, 'test'))
 
     def brute_optimize_ie(self, current_params_output=os.path.join('params', 'current_params.pck')):
         while self.hz < 3.5 or self.hz > 5.5:
@@ -370,9 +370,12 @@ class Simulator:
             self.plot_trace(np.array(self.recordings['current']))
         else:
             #Load sigmas
-            sigmas = pickle.load(open(os.path.join(self.PARAMETERS_PATH, 'sigmas.pck'), 'r'))
-            self.sigmamin = sigmas['sigmamin']
-            self.sigmamax = sigmas['sigmamax']
+            try:
+                sigmas = pickle.load(open(os.path.join(self.PARAMETERS_PATH, 'sigmas.pck'), 'r'))
+                self.sigmamin = sigmas['sigmamin']
+                self.sigmamax = sigmas['sigmamax']
+            except Exception as e:
+                print(e, "Doing with default values...")
             self.run_step(train_time, True)
             for n in range(test_num):
                 self.run_step(test_time, False)

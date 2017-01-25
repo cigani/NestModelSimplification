@@ -10,7 +10,6 @@ from AEC_Dummy import *
 from Filter_Rect_LinSpaced import *
 from Filter_Rect_LogSpaced import *
 from Filter_Exps import *
-from GIF_HT import *
 
 import seaborn
 import os
@@ -30,6 +29,7 @@ class GIFFit():
         self.tau_opt = []
         self.eta = []
         self.gamma = []
+        self.plot = plot
 
 
     @staticmethod

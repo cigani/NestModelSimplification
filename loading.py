@@ -4,6 +4,8 @@ import glob
 import h5py
 import os
 
+import pdb
+
 class Loader:
 
     """Loads data from hd5f format data structure. One set of files for Testing.
@@ -21,19 +23,19 @@ class Loader:
 
         # Path Setting
         self.simulator = simulator
-        self.TRAIN_DATA_PATH = kwargs.get('train_path', os.path.join(simulator.SIMULATION_PATH, "training"))
-        self.TEST_DATA_PATH = kwargs.get('test_path',  os.path.join(simulator.SIMULATION_PATH, "test"))
-        self.TRAIN_DATA_PATH = glob.glob(self.TRAIN_DATA_PATH)
-        self.TEST_DATA_PATH = glob.glob(self.TEST_DATA_PATH)
+        self.TRAIN_DATA_PATH = kwargs.get('train_path', os.path.join(simulator.SIMULATION_PATH, 'train'))
+        self.TEST_DATA_PATH = kwargs.get('test_path',  os.path.join(simulator.SIMULATION_PATH, 'test'))
+        self.TRAIN_DATA_PATH = glob.glob(self.TRAIN_DATA_PATH + '/*.hdf5')
+        self.TEST_DATA_PATH = glob.glob(self.TEST_DATA_PATH + '/*.hdf5')
 
         try:
-            assert self.TRAIN_DATA_PATH
+            assert len(self.TRAIN_DATA_PATH) != 0
         except:
-            raise Exception("Training data path is not set")
+            raise Exception("No training data")
         try:
-            assert self.TEST_DATA_PATH
+            assert len(self.TEST_DATA_PATH) != 0
         except:
-            raise Exception("Test data path is not set")
+            raise Exception("No test data")
 
         for n, k in zip(self.TEST_DATA_PATH, self.TRAIN_DATA_PATH):
             trainPattern = re.search('(\d+)\.hdf5$', k)

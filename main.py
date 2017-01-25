@@ -1,8 +1,13 @@
 from Simulator import Simulator
+from modelfit import GIFFit
 
 
 
 
-simulator = Simulator()
-simulator.main(optimize=True)
-simulator.main(optimize=False)
+try:
+    simulator = Simulator()
+    simulator.main(optimize=False, train_time=120, test_time=50)
+    GIFFit(simulator=simulator, plot=True).run()
+
+except Exception as e:
+    print(e)
