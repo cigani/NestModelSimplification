@@ -9,19 +9,23 @@ import CurrentGenerator
 
 import cPickle as pickle
 
+import os
 
 def data_records(dictionaryofvalues, path):
     import h5py
     import time
     timestr = time.strftime("%m.%d.%H:%M:%S")
-    PATH_FLAT = '### FILL IN ###'
-    EXPERIMENT_PATH = '### FILL IN ###'
-    H5_PATH = PATH_FLAT + EXPERIMENT_PATH + \
-              '### FILL IN ###/{0}/data.{1}.{2}'.format(path, timestr, 'hdf5')
 
-    print("Saving to: {0}".format(H5_PATH))
+    #Create path if it is not found
+    if not os.path.isdir(path):
+        os.makedirs(path)
 
-    data_file = h5py.File('{}'.format(H5_PATH), 'w')
+    #Where the training and test data is going to be stored
+    H5_OUTPUT_PATH = '{0}/data.{1}.{2}'.format(path, timestr, 'hdf5')
+
+    print("Saving to: {0}".format(H5_OUTPUT_PATH))
+
+    data_file = h5py.File('{}'.format(H5_OUTPUT_PATH), 'w')
     for keys, values in dictionaryofvalues.iteritems():
         saved = data_file.create_dataset('{0}'.format(keys),
                                          data=np.array(values),
@@ -72,8 +76,23 @@ def init_simulation():
     print('Loading constants')
     neuron.h.load_file('constants.hoc')
 
+
 class Simulator:
-    def __init__(self):
+    def __init__(self, **kwargs):
+
+        #Setting of paths
+        self.MODEL_PATH = kwargs.get('model_path','/Users/vlasteli/Documents/Models/L5_TTPC1_cADpyr232_1')
+        if not os.path.isdir(self.MODEL_PATH):
+            os.makedirs(self.MODEL_PATH)
+        self.SIMULATION_PATH = kwargs.get('sim_path', os.path.join(self.MODEL_PATH, 'simulation'))
+        if not os.path.isdir(self.SIMULATION_PATH):
+            os.makedirs(self.SIMULATION_PATH)
+        self.PARAMETERS_PATH = kwargs.get('parameters_path', os.path.join(self.SIMULATION_PATH, 'parameters'))
+        if not os.path.isdir(self.PARAMETERS_PATH):
+            os.makedirs(self.PARAMETERS_PATH)
+
+        #Add model path as to HOC_LIBRARY_PATH
+        os.environ['HOC_LIBRARY_PATH'] = os.path.join(self.MODEL_PATH)
 
         # Creation Variables
         self.currentFlag = False
@@ -88,11 +107,11 @@ class Simulator:
                 :param i_e0: Injected current without noise
         """
 
-        self.time = 3000.0
-        self.sigmamax = 0.325
-        self.sigmamin = 0.215
-        self.i_e0 = 0.16
-        self.dt = 0.025
+        self.time = kwargs.get('time',3000.0)
+        self.sigmamax = kwargs.get('sigmamax', 0.325)
+        self.sigmamin = kwargs.get('sigmamin', 0.215)
+        self.i_e0 = kwargs.get('i_e0', 0.16)
+        self.dt = kwargs.get('dt', 0.025)
 
         # Injection current
         self.playVector = []
@@ -104,14 +123,14 @@ class Simulator:
         self.rcurrent = []
 
         # Optimization
-        self.optimize = False
-        self.sigmaopt = 0.15
+        self.optimize = kwargs.get('optimize', False)
+        self.sigmaopt = kwargs.get('sigmaopt', 0.15)
         self.variance = []
         self.varPlot = []
         self.sigmaoptPlot = []
-        self.deltasigma = 0.005
+        self.deltasigma = kwargs.get('deltasigma', 0.005)
         self.spks = []
-        self.hz = 0.0
+        self.hz = kwargs.get('hz',0.0)
         self.RandomSeed = 777
 
         # Current generating class
@@ -124,7 +143,7 @@ class Simulator:
         :return: Cell
         :rtype: Hoc
         """
-        neuron.h.load_file("morphology.hoc")
+        neuron.h.load_file(os.path.join("morphology.hoc"))
         # Load biophysics
         neuron.h.load_file("biophysics.hoc")
         # Load main cell template
@@ -198,7 +217,7 @@ class Simulator:
                     self.rvoltage,
                     self.rcurrent))))
 
-    def run_step(self, time):
+    def run_step(self, time, train=True):
         self.time = time
         neuron.h.tstop = self.time
         self.create_current()
@@ -208,16 +227,16 @@ class Simulator:
         self.rvoltage = np.array(self.recordings['voltage'])
         self.rcurrent = np.array(self.recordings['current'])
         if not self.optimize:
-            if self.time >= 50000:
+            if train:
                 data_records(self.recordings, "Train")
             else:
                 data_records(self.recordings, "Test")
 
-    def brute_optimize_ie(self):
+    def brute_optimize_ie(self, current_params_output=os.path.join('params', 'current_params.pck')):
         while self.hz < 3.5 or self.hz > 5.5:
             self.optmize_ie()
             self.spks = self.cg(
-                voltage=self.rvoltage[1000 / 0.1:]).detect_spikes()
+                voltage=self.rvoltage[1000 * 10:]).detect_spikes()
             if self.spks.size:
                 self.hz = len(self.spks) / (self.time / 1000.0)
             else:
@@ -231,7 +250,7 @@ class Simulator:
                 self.i_e0 -= 0.05
         current_paras = {"i_e0": self.i_e0}
         pickle.dump(current_paras, open(
-            "### FILL IN ###", "wb"))
+            current_params_output, "wb"))
 
         CurrentGenerator.plotcurrent(self.current)
 
@@ -245,7 +264,7 @@ class Simulator:
         neuron.h.run()
         self.rvoltage = np.array(self.recordings['voltage'])
         self.variance = self.cg(voltage=self.rvoltage[
-                                        1000 / 0.1:]).sub_threshold_var()
+                                        1000 * 10:]).sub_threshold_var()
 
     def optimize_play_vector(self):
         self.time = 10000
@@ -266,7 +285,7 @@ class Simulator:
             self.playVector.set(k, self.current[k])
         return self.playVector
 
-    def brute_optimize_sigma(self):
+    def brute_optimize_sigma(self, sigmas_output=os.path.join('parameters', 'sigmas_output.pck')):
         n = 1
         while self.variance < 7 or not self.variance:
             self.run_optimize_sigma()
@@ -284,7 +303,7 @@ class Simulator:
         smaxIndex = find_opt(self.varPlot, 7)
         self.sigmamin = self.sigmaoptPlot[sminIndex]
         self.sigmamax = self.sigmaoptPlot[smaxIndex]
-        self.plot_trace(self.rvoltage[1000 / 0.1:])
+        self.plot_trace(self.rvoltage[1000 * 10:])
         if self.varPlot[sminIndex] > 4:
             raise Exception("Sigma Minimum is above acceptable range. "
                             "Initiate fitting with smaller Sigma")
@@ -303,7 +322,7 @@ class Simulator:
                   "sigmamax": self.sigmamax}
 
         pickle.dump(sigmas, open(
-            "### FILL IN ###", "wb"))
+            sigmas_output, "wb"))
 
     def plot_trace(self, val):
         plot_traces = True
@@ -314,9 +333,29 @@ class Simulator:
             pylab.ylabel('Vm (mV)')
             pylab.show()
 
-    def main(self, optimize=False):
+    def main(self, optimize=False, train_time=13000, test_time=21000, test_num=5):
+        """
+        :param optimize:
+        :param train_time:
+        :param test_time:
+        :param test_num:
+        :return:
+        """
 
-        """Main"""
+        """
+        First compile mechanisms, else they won't be found in the .hoc files,
+        interestingly only relative path works for compilation.
+        """
+        mechanisms_relative_path = os.path.relpath(os.path.join(self.MODEL_PATH, "mechanisms"))
+        os.system("nrnivmodl {0}".format(mechanisms_relative_path))
+
+        #Change working directory to model directory
+        OLD_DIR = os.path.dirname(os.path.realpath(__file__))
+        os.chdir(self.MODEL_PATH)
+        os.system('cd ' + self.MODEL_PATH)
+        #Check if mechanisms are compiled
+        print(os.system('pwd'))
+
         self.optimize = optimize
         init_simulation()
         self.cell = self.create_cell(add_synapses=False)
@@ -325,16 +364,18 @@ class Simulator:
         neuron.h.tstop = self.time
         neuron.h.cvode_active(0)
         if optimize:
-            self.brute_optimize_sigma()
-            self.brute_optimize_ie()
+            self.brute_optimize_sigma(sigmas_output=os.path.join(self.PARAMETERS_PATH, 'sigmas.pck'))
+            self.brute_optimize_ie(current_params_output=os.path.join(self.PARAMETERS_PATH, 'current_params.pck'))
             self.plot_trace(np.array(self.recordings['voltage']))
             self.plot_trace(np.array(self.recordings['current']))
         else:
-            self.run_step(130000)
-            n = 0
-            while n < 5:
-                self.run_step(21000)
-                n += 1
+            #Load sigmas
+            sigmas = pickle.load(open(os.path.join(self.PARAMETERS_PATH, 'sigmas.pck'), 'r'))
+            self.sigmamin = sigmas['sigmamin']
+            self.sigmamax = sigmas['sigmamax']
+            self.run_step(train_time, True)
+            for n in range(test_num):
+                self.run_step(test_time, False)
 
-
-Simulator().main(optimize=False)
+        #Change back to working directory
+        os.chdir(OLD_DIR)
