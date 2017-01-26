@@ -1,21 +1,11 @@
 import numpy as np
 
-
-def plotcurrent(val):
-    import pylab
-    # import seaborn
-    pylab.plot(val)
-    pylab.xlabel('time (ms)')
-    pylab.ylabel('I (nA)')
-    pylab.savefig('current.eps')
-    pylab.show()
-
-
 class CurrentGenerator:
     def __init__(self, seed=777, time=5000, tau=3.0, i_e0=0.5, sigmaMax=0.325,
                  sigmaMin=0.215, frequency=0.2, dt=0.025, voltage=[],
-                 threshold=0.0, sigmaOpt=0.51, optimize_flag=False):
+                 threshold=0.0, sigmaOpt=0.51, optimize_flag=False, simulator=None):
 
+        self.simulator = simulator
         self.seed = np.random.seed(seed)
         self.time = time
         self.tau = tau
