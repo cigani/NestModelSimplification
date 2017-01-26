@@ -1,7 +1,7 @@
 # NestModelSimplification
 
-# TODO: Update this README, it is out of data
-## Run main.py without arguements to get help
+# TODO: Update this README, it is not applicable
+## Run main.py without arguments to get help
 
 ## Python
 Tested on python 2.7 -- Should run on python 3.x with minimalfixes.
