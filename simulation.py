@@ -6,7 +6,7 @@ from bisect import bisect_left
 import neuron
 import numpy as np
 
-import CurrentGenerator
+import current_generation
 
 import cPickle as pickle
 
@@ -144,7 +144,7 @@ class Simulator:
         self.RandomSeed = 777
 
         # Current generating class
-        self.cg = CurrentGenerator.CurrentGenerator
+        self.cg = current_generation.CurrentGenerator
 
     def plotcurrent(self, val):
         plt.clf()
@@ -192,12 +192,12 @@ class Simulator:
         """
         Generate the noisy current needed for injection
         """
-        cg = CurrentGenerator.CurrentGenerator(time=self.time, i_e0=self.i_e0,
-                                               sigmaMax=self.sigmamax,
-                                               sigmaMin=self.sigmamin,
-                                               sigmaOpt=self.sigmaopt,
-                                               seed=self.RandomSeed,
-                                               optimize_flag=False)
+        cg = current_generation.CurrentGenerator(time=self.time, i_e0=self.i_e0,
+                                                 sigmaMax=self.sigmamax,
+                                                 sigmaMin=self.sigmamin,
+                                                 sigmaOpt=self.sigmaopt,
+                                                 seed=self.RandomSeed,
+                                                 optimize_flag=False)
         self.current = [x for x in cg.generate_current()]
         self.playVector = neuron.h.Vector(np.size(self.current))
 
@@ -292,9 +292,9 @@ class Simulator:
         self.i_e0 = 0.0
 
         # Be sure to set the flag here
-        cg = CurrentGenerator.CurrentGenerator(time=self.time,
-                                               sigmaOpt=self.sigmaopt,
-                                               optimize_flag=True)
+        cg = current_generation.CurrentGenerator(time=self.time,
+                                                 sigmaOpt=self.sigmaopt,
+                                                 optimize_flag=True)
 
         self.current = [x for x in cg.generate_current()]
         assert (np.size(self.current) == self.time / self.dt)
