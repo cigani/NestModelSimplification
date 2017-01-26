@@ -207,7 +207,7 @@ class Simulator:
         self.rcurrent = np.array(self.recordings['current'])
         recordings_dir = 'python_recordings'
         soma_voltage_filename = os.path.join(
-            recordings_dir,
+            self.SIMULATION_PATH,
             'soma_voltage_step.dat')
         np.savetxt(
             soma_voltage_filename,
