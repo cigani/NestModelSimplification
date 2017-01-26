@@ -159,4 +159,4 @@ class GIFFit():
         res_dic['model']['q_sfa'] = q_sfa
 
         # Fill in with your directory MAKE SURE YOU USE THE SAME FOR NEST
-        pickle.dump(res_dic, open(os.path.join(self.simulator.PARAMETERS_PATH, "NESTParams.pck", "wb")))
+        pickle.dump(res_dic, open(os.path.join(self.simulator.PARAMETERS_PATH, "NESTParams.pck"), "wb"))

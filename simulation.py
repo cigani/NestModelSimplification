@@ -123,6 +123,8 @@ class Simulator:
         self.dt = kwargs.get('dt', 0.025)
         self.plot = kwargs.get('plot', False)
 
+
+
         # Injection current
         self.playVector = []
         self.current = []
