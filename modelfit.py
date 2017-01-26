@@ -62,6 +62,29 @@ class GIFFit():
 
         self.fitaec(self.myExp)
 
+    def paramDict(self, gif):
+
+        modelparam = {
+            'C_m': gif.C,
+            'g_L': gif.gl,
+            'E_L': gif.El,
+            'V_reset': gif.Vr,
+            't_ref': gif.Tref,
+            'V_T_star': gif.Vt_star,
+            'Delta_V': gif.DV,
+            'lambda_0': gif.lambda0,
+            'tau_stc': gif.eta.taus,
+            'q_stc': gif.eta.getCoefficients(),
+            'tau_sfa': gif.gamma.taus,
+            'q_sfa': gif.gamma.getCoefficients()
+        }
+
+        res = {
+            'model': modelparam
+        }
+
+        return res
+
     def fitaec(self, myExp):
         myAEC = AEC_Dummy()
         myExp.setAEC(myAEC)
@@ -119,7 +142,7 @@ class GIFFit():
     def model_params(self, gif):
         q_stc = []
         q_sfa = []
-        res_dic = gif.getResultDictionary()
+        res_dic = self.paramDict(gif)
         # Fill in with your directory
         pickle.dump(res_dic, open(os.path.join(self.simulator.PARAMETERS_PATH, 'GIFParams.pck'), "wb"))
         for eta_index, eta in enumerate(res_dic['model']['q_stc']):
