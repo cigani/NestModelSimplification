@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import sys
 from bisect import bisect_left
@@ -8,6 +9,9 @@ import numpy as np
 import CurrentGenerator
 
 import cPickle as pickle
+
+from matplotlib import pyplot as plt
+import seaborn as sns
 
 import os
 
@@ -91,6 +95,11 @@ class Simulator:
         if not os.path.isdir(self.PARAMETERS_PATH):
             os.makedirs(self.PARAMETERS_PATH)
 
+        #Figures path
+        self.FIGURES_PATH = kwargs.get('figures_path', os.path.join(self.SIMULATION_PATH, 'figures'))
+        if not os.path.isdir(self.FIGURES_PATH):
+            os.makedirs(self.FIGURES_PATH)
+
         #Add model path as to HOC_LIBRARY_PATH
         os.environ['HOC_LIBRARY_PATH'] = os.path.join(self.MODEL_PATH)
 
@@ -112,6 +121,7 @@ class Simulator:
         self.sigmamin = kwargs.get('sigmamin', 0.215)
         self.i_e0 = kwargs.get('i_e0', 0.16)
         self.dt = kwargs.get('dt', 0.025)
+        self.plot = kwargs.get('plot', False)
 
         # Injection current
         self.playVector = []
@@ -135,6 +145,16 @@ class Simulator:
 
         # Current generating class
         self.cg = CurrentGenerator.CurrentGenerator
+
+    def plotcurrent(self, val):
+        plt.clf()
+        plt.plot(val)
+        plt.xlabel('time (ms)')
+        plt.ylabel('I (nA)')
+        print('Saveing figure: ', os.path.join(self.FIGURES_PATH, 'current.eps'))
+        plt.savefig(os.path.join(self.FIGURES_PATH, 'current.eps'))
+        if self.plot:
+            plt.show()
 
     def create_cell(self, add_synapses=True):
         # Load morphology
@@ -252,7 +272,7 @@ class Simulator:
         pickle.dump(current_paras, open(
             current_params_output, "wb"))
 
-        CurrentGenerator.plotcurrent(self.current)
+        self.plotcurrent(self.current)
 
     def optmize_ie(self):
         self.time = 15000
@@ -303,7 +323,7 @@ class Simulator:
         smaxIndex = find_opt(self.varPlot, 7)
         self.sigmamin = self.sigmaoptPlot[sminIndex]
         self.sigmamax = self.sigmaoptPlot[smaxIndex]
-        self.plot_trace(self.rvoltage[1000 * 10:])
+        self.plot_trace(self.rvoltage[1000 * 10:], 'rvoltage')
         if self.varPlot[sminIndex] > 4:
             raise Exception("Sigma Minimum is above acceptable range. "
                             "Initiate fitting with smaller Sigma")
@@ -324,14 +344,19 @@ class Simulator:
         pickle.dump(sigmas, open(
             sigmas_output, "wb"))
 
-    def plot_trace(self, val):
-        plot_traces = True
-        if plot_traces:
-            import pylab
-            pylab.figure()
-            pylab.plot(val)
-            pylab.ylabel('Vm (mV)')
-            pylab.show()
+    def plot_trace(self, val, name='trace', ylabel='Vm (mV)', save=False):
+        plt.plot(val)
+        plt.ylabel(ylabel)
+        plt.xlabel('time (ms)')
+
+        print ('Saving figure: ', os.path.join(self.FIGURES_PATH, "{0}_plot.eps".format(name)))
+
+        if save:
+            plt.savefig(os.path.join(self.FIGURES_PATH, "{0}_plot.eps".format(name)))
+
+        if self.plot:
+            plt.show()
+
 
     def main(self, optimize=False, train_time=13000, test_time=21000, test_num=5):
         """
@@ -366,8 +391,11 @@ class Simulator:
         if optimize:
             self.brute_optimize_sigma(sigmas_output=os.path.join(self.PARAMETERS_PATH, 'sigmas.pck'))
             self.brute_optimize_ie(current_params_output=os.path.join(self.PARAMETERS_PATH, 'current_params.pck'))
-            self.plot_trace(np.array(self.recordings['voltage']))
-            self.plot_trace(np.array(self.recordings['current']))
+            plt.subplot(211)
+            self.plot_trace(self.recordings['voltage'], save=False)
+            plt.subplot(212)
+            self.plot_trace(self.recordings['current'], 'training_current_and_voltage_optimization', ylabel='I(nA)', save=True)
+            plt.clf()
         else:
             #Load sigmas
             try:
@@ -377,6 +405,12 @@ class Simulator:
             except Exception as e:
                 print(e, "Doing with default values...")
             self.run_step(train_time, True)
+            plt.subplot(211)
+            self.plot_trace(self.recordings['voltage'], 'training_voltage', save=False)
+            plt.subplot(212)
+            self.plot_trace(self.recordings['current'], 'training_current_and_voltage', ylabel='I(nA)', save=True)
+            plt.clf()
+
             for n in range(test_num):
                 self.run_step(test_time, False)
 
