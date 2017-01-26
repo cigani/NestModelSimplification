@@ -42,8 +42,8 @@ def main():
         return
 
     if args.test:
-        print("Test mode...")
-        args.model_dirs = ['/Users/vlasteli/Documents/Models/L5_TTPC1_cADpyr232_1']
+        print("Test mode, reading default model from environment variables...")
+        args.model_dirs = [os.environ['NEURON_DEFAULT_MODEL']]
     else:
         try:
             args.model_dirs = args.accumulate(args.model_dirs)
