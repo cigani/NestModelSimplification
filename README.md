@@ -1,7 +1,10 @@
 # NestModelSimplification
 
+# TODO: Update this README, it is out of data
+## Run main.py without arguements to get help
+
 ## Python
-Tested on python 2.7 -- Should run on python 3.x with minimal (if any) fixes.
+Tested on python 2.7 -- Should run on python 3.x with minimalfixes.
 
 ## Required libraries
 * NEST: http://www.nest-simulator.org
@@ -9,8 +12,6 @@ Tested on python 2.7 -- Should run on python 3.x with minimal (if any) fixes.
 * h5py: http://www.h5py.org
 * Numpy: http://www.numpy.org
 * GIFFittingToolbox: https://github.com/pozzorin/GIFFittingToolbox/tree/HBP_Simplification 
-
-## Optional libraries
 * Seaborn (Pretty Plots): `pip install seaborn`
 
 ## Steps
