@@ -46,11 +46,11 @@ def main():
         except Exception as e:
             print("There are no models specified, please specify model directories")
             return
-    from Simulator import Simulator
-    from modelfit import GIFFit
 
     counter = 0
     if not args.clean:
+        from Simulator import Simulator
+        from modelfit import GIFFit
         #For each model directory, do fitting
         for model_dir in args.model_dirs:
             model_name = model_dir.split('/')[-1]
