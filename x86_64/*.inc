@@ -1,1 +1,0 @@
-../../../Documents/Models/L5_TTPC1_cADpyr232_1/mechanisms/*.inc
