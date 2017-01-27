@@ -359,8 +359,31 @@ class Simulator:
         if self.plot:
             plt.show()
 
+    def load_parameters(self):
+        # Load sigmas
+        try:
+            sigmas = pickle.load(open(os.path.join(self.PARAMETERS_PATH, 'sigmas.pck'), 'r'))
+            self.sigmamin = sigmas['sigmamin']
+            self.sigmamax = sigmas['sigmamax']
+        except Exception as e:
+            print(e, "Doing with default values...")
 
-    def main(self, optimize=False, train_time=13000, test_time=21000, test_num=5):
+        # Load i_e0
+        try:
+            current = pickle.load(open(os.path.join(self.PARAMETERS_PATH, 'current_params.pck'), 'r'))
+            self.i_e0 = current['i_e0']
+        except Exception as e:
+            print(e, "Doing with default values...")
+
+    def plot_current_voltage(self):
+        plt.subplot(211)
+        self.plot_trace(self.recordings['voltage'], save=False)
+        plt.subplot(212)
+        self.plot_trace(self.recordings['current'], 'training_current_and_voltage_optimization', ylabel='I(nA)',
+                        save=True)
+        plt.clf()
+
+    def main(self, optimize=False, train_time=130000, test_time=21000, test_num=5):
         """
         :param optimize:
         :param train_time:
@@ -391,27 +414,14 @@ class Simulator:
         neuron.h.tstop = self.time
         neuron.h.cvode_active(0)
         if optimize:
-            self.brute_optimize_sigma(sigmas_output=os.path.join(self.PARAMETERS_PATH, 'sigmas.pck'))
+            #self.brute_optimize_sigma(sigmas_output=os.path.join(self.PARAMETERS_PATH, 'sigmas.pck'))
             self.brute_optimize_ie(current_params_output=os.path.join(self.PARAMETERS_PATH, 'current_params.pck'))
             plt.subplot(211)
-            self.plot_trace(self.recordings['voltage'], save=False)
-            plt.subplot(212)
-            self.plot_trace(self.recordings['current'], 'training_current_and_voltage_optimization', ylabel='I(nA)', save=True)
-            plt.clf()
+            self.plot_current_voltage()
         else:
-            #Load sigmas
-            try:
-                sigmas = pickle.load(open(os.path.join(self.PARAMETERS_PATH, 'sigmas.pck'), 'r'))
-                self.sigmamin = sigmas['sigmamin']
-                self.sigmamax = sigmas['sigmamax']
-            except Exception as e:
-                print(e, "Doing with default values...")
+            self.load_parameters()
             self.run_step(train_time, True)
-            plt.subplot(211)
-            self.plot_trace(self.recordings['voltage'], 'training_voltage', save=False)
-            plt.subplot(212)
-            self.plot_trace(self.recordings['current'], 'training_current_and_voltage', ylabel='I(nA)', save=True)
-            plt.clf()
+            self.plot_current_voltage()
 
             for n in range(test_num):
                 self.run_step(test_time, False)
