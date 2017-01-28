@@ -35,6 +35,10 @@ def main():
                         help="Do optimize step before doing the simulation",
                         default=False, action='store_true')
 
+    parser.add_argument("-ctn", "--cell-template-name",
+                        help="Cell template name", type=str,
+                        default='cADpyr232_L5_TTPC1_0fb1ca4724')
+
     args = parser.parse_args()
 
     if len(sys.argv) == 1:
@@ -61,7 +65,7 @@ def main():
             percentage(float(counter) / len(args.model_dirs))
             print(40*'#', 'FITTING ' + model_name, 40*'#')
             try:
-                simulator = Simulator(model_path=model_dir)
+                simulator = Simulator(model_path=model_dir, cell_template_name=args.cell_template_name)
                 if args.optimize:
                     print('Optimizing...')
                     simulator.main(optimize=True)
