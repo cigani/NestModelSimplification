@@ -95,6 +95,9 @@ class Simulator:
         if not os.path.isdir(self.PARAMETERS_PATH):
             os.makedirs(self.PARAMETERS_PATH)
 
+        self.CELL_TEMPLATE = kwargs.get('cell_template_name', 'cADpyr232_L5_TTPC1_0fb1ca4724')
+
+
         #Figures path
         self.FIGURES_PATH = kwargs.get('figures_path', os.path.join(self.SIMULATION_PATH, 'figures'))
         if not os.path.isdir(self.FIGURES_PATH):
@@ -172,8 +175,7 @@ class Simulator:
         neuron.h.load_file("template.hoc")
 
         # Instantiate the cell from the template
-
-        self.cell = neuron.h.cADpyr232_L5_TTPC1_0fb1ca4724(1 if add_synapses
+        self.cell = getattr(neuron.h, self.CELL_TEMPLATE)(1 if add_synapses
                                                            else 0)
 
         return self.cell
