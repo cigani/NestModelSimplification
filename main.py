@@ -9,6 +9,17 @@ import sys
 def percentage(perc):
     print('Percentage complete: ','[', int(perc*80)*'=', ' '* int(80-perc*80), ']')
 
+def findTemplateName(model_dir):
+
+    with open(os.path.join(model_dir, 'template.hoc'), 'r') as temp_file:
+
+        for line in temp_file:
+            #Retrun template name
+            if line.__contains__('begintemplate'):
+                return line.strip().split()[1]
+
+    return None
+
 def main():
 
     print("Starting simulations...")
@@ -18,6 +29,8 @@ def main():
 
     parser.add_argument("-md", "--model-dirs", type=str, help="Space divided list of paths to model directories",
                         default=[])
+    parser.add_argument("-mr", "--models-root", type=str, help="Root directory containing the model directories",
+                        default=False)
     parser.add_argument("-p", "--plot", help="Plot during fitting (requires presence during fitting)",
                         default=False, action='store_true')
     parser.add_argument("-j", "--json", help="Json config file with all of the parameters needed for the simulations and fitting",
@@ -50,7 +63,15 @@ def main():
         args.model_dirs = [os.environ['NEURON_DEFAULT_MODEL']]
     else:
         try:
-            args.model_dirs = args.accumulate(args.model_dirs)
+            if args.models_root:
+                args.model_dirs = []
+                for ind, f in enumerate(os.listdir(args.models_root)):
+                    if f.__contains__('zip') or f.__contains__('.'):
+                        continue
+                    else:
+                        args.model_dirs.append(os.path.join(args.models_root, f))
+            else:
+                args.model_dirs = args.model_dirs.split()
         except Exception as e:
             print("There are no models specified, please specify model directories")
             return
@@ -64,6 +85,11 @@ def main():
             model_name = model_dir.split('/')[-1]
             percentage(float(counter) / len(args.model_dirs))
             print(40*'#', 'FITTING ' + model_name, 40*'#')
+
+            template_name = findTemplateName(model_dir)
+            if template_name:
+                args.cell_template_name = template_name
+
             try:
                 simulator = Simulator(model_path=model_dir, cell_template_name=args.cell_template_name)
                 if args.optimize:

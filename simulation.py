@@ -3,12 +3,12 @@ import os
 import sys
 from bisect import bisect_left
 
-import neuron
 import numpy as np
 
 import current_generation
 
 import cPickle as pickle
+import neuron
 
 from matplotlib import pyplot as plt
 import seaborn as sns
@@ -399,7 +399,9 @@ class Simulator:
         interestingly only relative path works for compilation.
         """
         mechanisms_relative_path = os.path.relpath(os.path.join(self.MODEL_PATH, "mechanisms"))
-        os.system("nrnivmodl {0} &".format(mechanisms_relative_path))
+        os.system("nrnivmodl {0} ".format(mechanisms_relative_path))
+        print('Importing neuron...')
+        import neuron
 
         #Change working directory to model directory
         OLD_DIR = os.path.dirname(os.path.realpath(__file__))
