@@ -400,8 +400,8 @@ class Simulator:
         """
         mechanisms_relative_path = os.path.relpath(os.path.join(self.MODEL_PATH, "mechanisms"))
         os.system("nrnivmodl {0} ".format(mechanisms_relative_path))
-        print('Importing neuron...')
-        import neuron
+        print('Reloading neuron...')
+        reload(neuron)
 
         #Change working directory to model directory
         OLD_DIR = os.path.dirname(os.path.realpath(__file__))
