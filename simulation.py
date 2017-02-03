@@ -394,14 +394,6 @@ class Simulator:
         :return:
         """
 
-        """
-        First compile mechanisms, else they won't be found in the .hoc files,
-        interestingly only relative path works for compilation.
-        """
-        mechanisms_relative_path = os.path.relpath(os.path.join(self.MODEL_PATH, "mechanisms"))
-        os.system("nrnivmodl {0} ".format(mechanisms_relative_path))
-        print('Reloading neuron...')
-        reload(neuron)
 
         #Change working directory to model directory
         OLD_DIR = os.path.dirname(os.path.realpath(__file__))

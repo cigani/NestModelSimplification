@@ -6,7 +6,7 @@ import shutil
 import sys
 import threading
 from multiprocessing import Pool
-import multiprocessing
+import subprocess
 
 def percentage(perc):
     print('Percentage complete: ','[', int(perc*80)*'=', ' '* int(80-perc*80), ']')
@@ -26,6 +26,10 @@ def findTemplateName(model_dir):
     Function called by thread to run a simulation for single model
 """
 def simulate(args, model_dir):
+
+    mechanisms_relative_path = os.path.relpath(os.path.join(model_dir, "mechanisms"))
+    subprocess.call("nrnivmodl {0} ".format(mechanisms_relative_path))
+
     if not args.clean:
         from simulation import Simulator
         from modelfit import GIFFit
