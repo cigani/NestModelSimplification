@@ -4,7 +4,9 @@ import argparse
 import os
 import shutil
 import sys
-
+import threading
+from multiprocessing import Pool
+import multiprocessing
 
 def percentage(perc):
     print('Percentage complete: ','[', int(perc*80)*'=', ' '* int(80-perc*80), ']')
@@ -19,6 +21,43 @@ def findTemplateName(model_dir):
                 return line.strip().split()[1]
 
     return None
+
+"""
+    Function called by thread to run a simulation for single model
+"""
+def simulate(args, model_dir):
+    if not args.clean:
+        from simulation import Simulator
+        from modelfit import GIFFit
+
+        model_name = model_dir.split('/')[-1]
+        print(40 * '#', 'FITTING ' + model_name, 40 * '#')
+
+        template_name = findTemplateName(model_dir)
+        if template_name:
+            args.cell_template_name = template_name
+
+        try:
+            simulator = Simulator(model_path=model_dir, cell_template_name=args.cell_template_name)
+            if args.optimize:
+                print('Optimizing...')
+                simulator.main(optimize=True)
+            if not args.fit:
+                print('Simulating...')
+                simulator.main(optimize=False)
+            print('Fitting...')
+            GIFFit(simulator=simulator, plot=args.plot).run()
+
+        except Exception as e:
+            print(e)
+
+    else:
+        model_name = model_dir.split('/')[-1]
+        print(40 * '#', 'CLEANING ' + model_name, 40 * '#')
+        if os.path.isdir(os.path.join(model_dir, 'simulation')):
+            shutil.rmtree(os.path.join(model_dir, 'simulation'))
+
+
 
 def main():
 
@@ -47,6 +86,9 @@ def main():
     parser.add_argument("-o", "--optimize",
                         help="Do optimize step before doing the simulation",
                         default=False, action='store_true')
+    parser.add_argument("-th", "--threads",
+                        help="The number of threads that should be used. One simulation per thread is to be made",
+                        default=1)
 
     parser.add_argument("-ctn", "--cell-template-name",
                         help="Cell template name", type=str,
@@ -76,41 +118,14 @@ def main():
             print("There are no models specified, please specify model directories")
             return
 
-    counter = 0
-    if not args.clean:
-        from simulation import Simulator
-        from modelfit import GIFFit
-        #For each model directory, do fitting
-        for model_dir in args.model_dirs:
-            model_name = model_dir.split('/')[-1]
-            percentage(float(counter) / len(args.model_dirs))
-            print(40*'#', 'FITTING ' + model_name, 40*'#')
+    pool = Pool(processes=args.threads)
+    print("Running {} threads...".format(args.threads))
+    print(args.model_dirs)
+    for model_dir in args.model_dirs:
+        pool.apply_async(func=simulate, kwds={"args" : args, "model_dir" : model_dir})
 
-            template_name = findTemplateName(model_dir)
-            if template_name:
-                args.cell_template_name = template_name
-
-            try:
-                simulator = Simulator(model_path=model_dir, cell_template_name=args.cell_template_name)
-                if args.optimize:
-                    print('Optimizing...')
-                    simulator.main(optimize=True)
-                if not args.fit:
-                    print('Simulating...')
-                    simulator.main(optimize=False)
-                print('Fitting...')
-                GIFFit(simulator=simulator, plot=args.plot).run()
-
-            except Exception as e:
-                print(e)
-
-    else:
-        #Clean flag specified, remove all simulation data
-        for model_dir in args.model_dirs:
-            model_name = model_dir.split('/')[-1]
-            print(40 * '#', 'CLEANING ' + model_name, 40 * '#')
-            if os.path.isdir(os.path.join(model_dir, 'simulation')):
-                shutil.rmtree(os.path.join(model_dir, 'simulation'))
+    pool.close()
+    pool.join()
 
 
 if __name__ == '__main__':
