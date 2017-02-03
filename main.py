@@ -27,10 +27,12 @@ def findTemplateName(model_dir):
 """
 def simulate(args, model_dir):
 
-    mechanisms_relative_path = os.path.relpath(os.path.join(model_dir, "mechanisms"))
-    subprocess.call("nrnivmodl {0} ".format(mechanisms_relative_path))
+
 
     if not args.clean:
+        mechanisms_relative_path = os.path.relpath(os.path.join(model_dir, "mechanisms"))
+        os.system("nrnivmodl {0} ".format(mechanisms_relative_path))
+
         from simulation import Simulator
         from modelfit import GIFFit
 
@@ -90,7 +92,7 @@ def main():
     parser.add_argument("-o", "--optimize",
                         help="Do optimize step before doing the simulation",
                         default=False, action='store_true')
-    parser.add_argument("-th", "--threads",
+    parser.add_argument("-th", "--threads", type=int,
                         help="The number of threads that should be used. One simulation per thread is to be made",
                         default=1)
 
