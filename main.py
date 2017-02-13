@@ -119,7 +119,7 @@ def main():
                     else:
                         args.model_dirs.append(os.path.join(args.models_root, f))
             else:
-                args.model_dirs = args.model_dirs.split()
+                args.model_dirs = args.model_dirs.split(',')
         except Exception as e:
             print("There are no models specified, please specify model directories")
             return
