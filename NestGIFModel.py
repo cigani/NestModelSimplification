@@ -6,27 +6,37 @@ import nest.raster_plot
 import matplotlib.pyplot as plt
 import cPickle as pickle
 
+def dump_keys(d, lvl=0):
+    for k, v in d.iteritems():
+        print '%s%s' % (lvl * ' ', k)
+        if type(v) == dict:
+            dump_keys(v, lvl+1)
 
 class NestModel:
-    def __init__(self):
+    def __init__(self, nest_params_path, threads=4):
 
         self.name = self.__class__.__name__
         self.built = False
         self.connected = False
+        self.nest_params_path = nest_params_path
 
-        # Model Fit Parameters
-        self.neuron_params = {}
+        param_dict = pickle.load(open(nest_params_path))
+        param_dict['model']['C_m'] *= 10 ** 3
+        self.neuron_params = param_dict['model']
+
+        #Print parameters
+        dump_keys(self.neuron_params)
 
         # NEST Model Parameters
         self.neurons = 50
         self.p_ex = 0.03
         self.w_ex = 60.0
-        self.threads = 1
+        self.threads = threads
         self.poisson_neurons = 5  # size of Poisson group
         self.rate_noise = 5.0  # firing rate of Poisson neurons (Hz)
         self.w_noise = 10.0  # synaptic weights from Poisson to population
         self.dt = 0.1
-        self.simtime = 20000
+        self.simtime = 10000
 
         # Misc
         self.name = self.__class__.__name__
@@ -38,21 +48,8 @@ class NestModel:
         nest.SetKernelStatus({"data_path": self.data_path})
         nest.SetKernelStatus({"resolution": self.dt})
 
-    def set_model_params(self):
-        # Be sure to set this to where it is saved in << modelfit.py >>
-        param_dict= pickle.load(open(
-            "### FILL IN ###"))
-        param_dict['model']['C_m'] *= 10 ** 3
-        self.neuron_params = param_dict['model']
-        print self.neuron_params
 
     def calibrate(self):
-        """
-        Compute all parameter dependent variables of the
-        model.
-        """
-        self.set_model_params()
-
         nest.SetKernelStatus({"print_time": True,
                               "local_num_threads": self.threads,
                               "resolution": self.dt})
@@ -111,4 +108,4 @@ class NestModel:
         plt.show()
         print(self.neuron_params)
 
-NestModel().run()
+NestModel(nest_params_path='/Users/vlasteli/Documents/Models/L5_TTPC1_cADpyr232_1/simulation/parameters/NESTParams.pck').run()

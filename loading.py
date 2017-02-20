@@ -2,7 +2,9 @@ import re
 import numpy as np
 import glob
 import h5py
+import os
 
+import pdb
 
 class Loader:
 
@@ -17,26 +19,23 @@ class Loader:
     Returns two arrays composed of [Voltage, Current, Time] for Train and
     Test"""
 
-    def __init__(self):
+    def __init__(self, simulator, **kwargs):
 
         # Path Setting
-        self.PATH_FLAT = '### FILL IN ###'
-        self.CELL_PATH = '### FILL IN ###'
-        self.TRAIN_PATH = '### FILL IN ###'
-        self.TEST_PATH = '### FILL IN ###'
-        self.TRAIN_DATA_PATH = glob.glob(self.PATH_FLAT + self.CELL_PATH +
-                                         self.TRAIN_PATH)
-        self.TEST_DATA_PATH = glob.glob(self.PATH_FLAT + self.CELL_PATH +
-                                        self.TEST_PATH)
+        self.simulator = simulator
+        self.TRAIN_DATA_PATH = kwargs.get('train_path', os.path.join(simulator.SIMULATION_PATH, 'train'))
+        self.TEST_DATA_PATH = kwargs.get('test_path',  os.path.join(simulator.SIMULATION_PATH, 'test'))
+        self.TRAIN_DATA_PATH = glob.glob(self.TRAIN_DATA_PATH + '/*.hdf5')
+        self.TEST_DATA_PATH = glob.glob(self.TEST_DATA_PATH + '/*.hdf5')
 
         try:
-            assert self.TRAIN_DATA_PATH
+            assert len(self.TRAIN_DATA_PATH) != 0
         except:
-            raise Exception("Training data path is not set")
+            raise Exception("No training data")
         try:
-            assert self.TEST_DATA_PATH
+            assert len(self.TEST_DATA_PATH) != 0
         except:
-            raise Exception("Test data path is not set")
+            raise Exception("No test data")
 
         for n, k in zip(self.TEST_DATA_PATH, self.TRAIN_DATA_PATH):
             trainPattern = re.search('(\d+)\.hdf5$', k)

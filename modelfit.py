@@ -10,13 +10,14 @@ from AEC_Dummy import *
 from Filter_Rect_LinSpaced import *
 from Filter_Rect_LogSpaced import *
 from Filter_Exps import *
-from GIF_HT import *
 
 import seaborn
+import os
 
+class GIFFit():
+    def __init__(self, simulator, plot=False):
 
-class Fit():
-    def __init__(self):
+        self.simulator = simulator
         self.V_units = 10 ** -3
         self.I_units = 10 ** -9
         self.trainData = []
@@ -28,6 +29,7 @@ class Fit():
         self.tau_opt = []
         self.eta = []
         self.gamma = []
+        self.plot = plot
 
 
     @staticmethod
@@ -36,10 +38,10 @@ class Fit():
         for i in xrange(0, len(l), n):
             yield l[i:i + n]
 
-    def importdata(self):
+    def run(self):
         # Data[0] = Voltage, Data[1] = Current, Data[2] = Time
 
-        self.trainData, self.testData = loading.Loader().dataload()
+        self.trainData, self.testData = loading.Loader(simulator=self.simulator).dataload()
 
         self.myExp = Experiment('Experiment 1', .1)
         for voltage, current, duration in zip(self.trainData[0],
@@ -60,6 +62,29 @@ class Fit():
 
         self.fitaec(self.myExp)
 
+    def paramDict(self, gif):
+
+        modelparam = {
+            'C_m': gif.C,
+            'g_L': gif.gl,
+            'E_L': gif.El,
+            'V_reset': gif.Vr,
+            't_ref': gif.Tref,
+            'V_T_star': gif.Vt_star,
+            'Delta_V': gif.DV,
+            'lambda_0': gif.lambda0,
+            'tau_stc': gif.eta.taus,
+            'q_stc': gif.eta.getCoefficients(),
+            'tau_sfa': gif.gamma.taus,
+            'q_sfa': gif.gamma.getCoefficients()
+        }
+
+        res = {
+            'model': modelparam
+        }
+
+        return res
+
     def fitaec(self, myExp):
         myAEC = AEC_Dummy()
         myExp.setAEC(myAEC)
@@ -68,8 +93,10 @@ class Fit():
         self.optimizetimescales(myExp)
 
     def optimizetimescales(self, myExp):
-        # myExp.plotTrainingSet()
-        # myExp.plotTestSet()
+
+        if(self.plot):
+            myExp.plotTrainingSet()
+            myExp.plotTestSet()
 
         myGIF_rect = GIF(0.1)
 
@@ -99,21 +126,25 @@ class Fit():
         myGIF.fit(myExp, DT_beforeSpike=self.DT_beforespike)
         myPrediction = myExp.predictSpikes(myGIF, nb_rep=500)
         Md = myPrediction.computeMD_Kistler(4, 0.1)
-        myPrediction.plotRaster(delta=1000.0)
+
+        if(self.plot):
+            myPrediction.plotRaster(delta=1000.0)
 
         self.eta = myGIF.eta.getCoefficients()
         self.gamma = myGIF.gamma.getCoefficients()
-        myGIF.plotParameters()
-        myGIF.save('myGIF.pck')
+
+        if(self.plot):
+            myGIF.plotParameters()
+        myGIF.save(os.path.join(self.simulator.PARAMETERS_PATH, 'myGIF.pck'))
 
         self.model_params(myGIF)
 
     def model_params(self, gif):
         q_stc = []
         q_sfa = []
-        res_dic = gif.getResultDictionary()
+        res_dic = self.paramDict(gif)
         # Fill in with your directory
-        pickle.dump(res_dic, open("NestModel/param/GIFParas.p", "wb"))
+        pickle.dump(res_dic, open(os.path.join(self.simulator.PARAMETERS_PATH, 'GIFParams.pck'), "wb"))
         for eta_index, eta in enumerate(res_dic['model']['q_stc']):
             q_eta_temp = eta / (
                 1 - np.exp(-self.T_ref /
@@ -128,5 +159,4 @@ class Fit():
         res_dic['model']['q_sfa'] = q_sfa
 
         # Fill in with your directory MAKE SURE YOU USE THE SAME FOR NEST
-        pickle.dump(res_dic, open("NestModel/param/NESTParas.p", "wb"))
-Fit().importdata()
+        pickle.dump(res_dic, open(os.path.join(self.simulator.PARAMETERS_PATH, "NESTParams.pck"), "wb"))

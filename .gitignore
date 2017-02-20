@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+x86_64
+.idea
+workspace.xml
+
 # C extensions
 *.so
 

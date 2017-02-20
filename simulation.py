@@ -1,27 +1,35 @@
+from __future__ import print_function
 import os
 import sys
 from bisect import bisect_left
 
-import neuron
 import numpy as np
 
-import CurrentGenerator
+import current_generation
 
 import cPickle as pickle
+import neuron
 
+from matplotlib import pyplot as plt
+import seaborn as sns
+
+import os
 
 def data_records(dictionaryofvalues, path):
     import h5py
     import time
     timestr = time.strftime("%m.%d.%H:%M:%S")
-    PATH_FLAT = '### FILL IN ###'
-    EXPERIMENT_PATH = '### FILL IN ###'
-    H5_PATH = PATH_FLAT + EXPERIMENT_PATH + \
-              '### FILL IN ###/{0}/data.{1}.{2}'.format(path, timestr, 'hdf5')
 
-    print("Saving to: {0}".format(H5_PATH))
+    #Create path if it is not found
+    if not os.path.isdir(path):
+        os.makedirs(path)
 
-    data_file = h5py.File('{}'.format(H5_PATH), 'w')
+    #Where the training and test data is going to be stored
+    H5_OUTPUT_PATH = '{0}/data.{1}.{2}'.format(path, timestr, 'hdf5')
+
+    print("Saving to: {0}".format(H5_OUTPUT_PATH))
+
+    data_file = h5py.File('{}'.format(H5_OUTPUT_PATH), 'w')
     for keys, values in dictionaryofvalues.iteritems():
         saved = data_file.create_dataset('{0}'.format(keys),
                                          data=np.array(values),
@@ -72,8 +80,31 @@ def init_simulation():
     print('Loading constants')
     neuron.h.load_file('constants.hoc')
 
+
 class Simulator:
-    def __init__(self):
+    def __init__(self, **kwargs):
+
+        #Setting of paths
+        self.MODEL_PATH = kwargs.get('model_path','/Users/vlasteli/Documents/Models/L5_TTPC1_cADpyr232_1')
+        if not os.path.isdir(self.MODEL_PATH):
+            os.makedirs(self.MODEL_PATH)
+        self.SIMULATION_PATH = kwargs.get('sim_path', os.path.join(self.MODEL_PATH, 'simulation'))
+        if not os.path.isdir(self.SIMULATION_PATH):
+            os.makedirs(self.SIMULATION_PATH)
+        self.PARAMETERS_PATH = kwargs.get('parameters_path', os.path.join(self.SIMULATION_PATH, 'parameters'))
+        if not os.path.isdir(self.PARAMETERS_PATH):
+            os.makedirs(self.PARAMETERS_PATH)
+
+        self.CELL_TEMPLATE = kwargs.get('cell_template_name', 'cADpyr232_L5_TTPC1_0fb1ca4724')
+
+
+        #Figures path
+        self.FIGURES_PATH = kwargs.get('figures_path', os.path.join(self.SIMULATION_PATH, 'figures'))
+        if not os.path.isdir(self.FIGURES_PATH):
+            os.makedirs(self.FIGURES_PATH)
+
+        #Add model path as to HOC_LIBRARY_PATH
+        os.environ['HOC_LIBRARY_PATH'] = os.path.join(self.MODEL_PATH)
 
         # Creation Variables
         self.currentFlag = False
@@ -88,11 +119,14 @@ class Simulator:
                 :param i_e0: Injected current without noise
         """
 
-        self.time = 3000.0
-        self.sigmamax = 0.325
-        self.sigmamin = 0.215
-        self.i_e0 = 0.16
-        self.dt = 0.025
+        self.time = kwargs.get('time',3000.0)
+        self.sigmamax = kwargs.get('sigmamax', 0.325)
+        self.sigmamin = kwargs.get('sigmamin', 0.215)
+        self.i_e0 = kwargs.get('i_e0', 0.16)
+        self.dt = kwargs.get('dt', 0.025)
+        self.plot = kwargs.get('plot', False)
+
+
 
         # Injection current
         self.playVector = []
@@ -104,18 +138,28 @@ class Simulator:
         self.rcurrent = []
 
         # Optimization
-        self.optimize = False
-        self.sigmaopt = 0.15
+        self.optimize = kwargs.get('optimize', False)
+        self.sigmaopt = kwargs.get('sigmaopt', 0.15)
         self.variance = []
         self.varPlot = []
         self.sigmaoptPlot = []
-        self.deltasigma = 0.005
+        self.deltasigma = kwargs.get('deltasigma', 0.005)
         self.spks = []
-        self.hz = 0.0
+        self.hz = kwargs.get('hz',0.0)
         self.RandomSeed = 777
 
         # Current generating class
-        self.cg = CurrentGenerator.CurrentGenerator
+        self.cg = current_generation.CurrentGenerator
+
+    def plotcurrent(self, val):
+        plt.clf()
+        plt.plot(val)
+        plt.xlabel('time (ms)')
+        plt.ylabel('I (nA)')
+        print('Saveing figure: ', os.path.join(self.FIGURES_PATH, 'current.eps'))
+        plt.savefig(os.path.join(self.FIGURES_PATH, 'current.eps'))
+        if self.plot:
+            plt.show()
 
     def create_cell(self, add_synapses=True):
         # Load morphology
@@ -124,15 +168,14 @@ class Simulator:
         :return: Cell
         :rtype: Hoc
         """
-        neuron.h.load_file("morphology.hoc")
+        neuron.h.load_file(os.path.join("morphology.hoc"))
         # Load biophysics
         neuron.h.load_file("biophysics.hoc")
         # Load main cell template
         neuron.h.load_file("template.hoc")
 
         # Instantiate the cell from the template
-
-        self.cell = neuron.h.cADpyr232_L5_TTPC1_0fb1ca4724(1 if add_synapses
+        self.cell = getattr(neuron.h, self.CELL_TEMPLATE)(1 if add_synapses
                                                            else 0)
 
         return self.cell
@@ -153,12 +196,12 @@ class Simulator:
         """
         Generate the noisy current needed for injection
         """
-        cg = CurrentGenerator.CurrentGenerator(time=self.time, i_e0=self.i_e0,
-                                               sigmaMax=self.sigmamax,
-                                               sigmaMin=self.sigmamin,
-                                               sigmaOpt=self.sigmaopt,
-                                               seed=self.RandomSeed,
-                                               optimize_flag=False)
+        cg = current_generation.CurrentGenerator(time=self.time, i_e0=self.i_e0,
+                                                 sigmaMax=self.sigmamax,
+                                                 sigmaMin=self.sigmamin,
+                                                 sigmaOpt=self.sigmaopt,
+                                                 seed=self.RandomSeed,
+                                                 optimize_flag=False)
         self.current = [x for x in cg.generate_current()]
         self.playVector = neuron.h.Vector(np.size(self.current))
 
@@ -188,7 +231,7 @@ class Simulator:
         self.rcurrent = np.array(self.recordings['current'])
         recordings_dir = 'python_recordings'
         soma_voltage_filename = os.path.join(
-            recordings_dir,
+            self.SIMULATION_PATH,
             'soma_voltage_step.dat')
         np.savetxt(
             soma_voltage_filename,
@@ -198,7 +241,7 @@ class Simulator:
                     self.rvoltage,
                     self.rcurrent))))
 
-    def run_step(self, time):
+    def run_step(self, time, train=True):
         self.time = time
         neuron.h.tstop = self.time
         self.create_current()
@@ -208,16 +251,16 @@ class Simulator:
         self.rvoltage = np.array(self.recordings['voltage'])
         self.rcurrent = np.array(self.recordings['current'])
         if not self.optimize:
-            if self.time >= 50000:
-                data_records(self.recordings, "Train")
+            if train:
+                data_records(self.recordings, os.path.join(self.SIMULATION_PATH, 'train'))
             else:
-                data_records(self.recordings, "Test")
+                data_records(self.recordings, os.path.join(self.SIMULATION_PATH, 'test'))
 
-    def brute_optimize_ie(self):
+    def brute_optimize_ie(self, current_params_output=os.path.join('params', 'current_params.pck')):
         while self.hz < 3.5 or self.hz > 5.5:
             self.optmize_ie()
             self.spks = self.cg(
-                voltage=self.rvoltage[1000 / 0.1:]).detect_spikes()
+                voltage=self.rvoltage[1000 * 10:]).detect_spikes()
             if self.spks.size:
                 self.hz = len(self.spks) / (self.time / 1000.0)
             else:
@@ -231,9 +274,9 @@ class Simulator:
                 self.i_e0 -= 0.05
         current_paras = {"i_e0": self.i_e0}
         pickle.dump(current_paras, open(
-            "### FILL IN ###", "wb"))
+            current_params_output, "wb"))
 
-        CurrentGenerator.plotcurrent(self.current)
+        self.plotcurrent(self.current)
 
     def optmize_ie(self):
         self.time = 15000
@@ -245,7 +288,7 @@ class Simulator:
         neuron.h.run()
         self.rvoltage = np.array(self.recordings['voltage'])
         self.variance = self.cg(voltage=self.rvoltage[
-                                        1000 / 0.1:]).sub_threshold_var()
+                                        1000 * 10:]).sub_threshold_var()
 
     def optimize_play_vector(self):
         self.time = 10000
@@ -253,9 +296,9 @@ class Simulator:
         self.i_e0 = 0.0
 
         # Be sure to set the flag here
-        cg = CurrentGenerator.CurrentGenerator(time=self.time,
-                                               sigmaOpt=self.sigmaopt,
-                                               optimize_flag=True)
+        cg = current_generation.CurrentGenerator(time=self.time,
+                                                 sigmaOpt=self.sigmaopt,
+                                                 optimize_flag=True)
 
         self.current = [x for x in cg.generate_current()]
         assert (np.size(self.current) == self.time / self.dt)
@@ -266,7 +309,7 @@ class Simulator:
             self.playVector.set(k, self.current[k])
         return self.playVector
 
-    def brute_optimize_sigma(self):
+    def brute_optimize_sigma(self, sigmas_output=os.path.join('parameters', 'sigmas_output.pck')):
         n = 1
         while self.variance < 7 or not self.variance:
             self.run_optimize_sigma()
@@ -284,7 +327,7 @@ class Simulator:
         smaxIndex = find_opt(self.varPlot, 7)
         self.sigmamin = self.sigmaoptPlot[sminIndex]
         self.sigmamax = self.sigmaoptPlot[smaxIndex]
-        self.plot_trace(self.rvoltage[1000 / 0.1:])
+        self.plot_trace(self.rvoltage[1000 * 10:], 'rvoltage')
         if self.varPlot[sminIndex] > 4:
             raise Exception("Sigma Minimum is above acceptable range. "
                             "Initiate fitting with smaller Sigma")
@@ -303,20 +346,62 @@ class Simulator:
                   "sigmamax": self.sigmamax}
 
         pickle.dump(sigmas, open(
-            "### FILL IN ###", "wb"))
+            sigmas_output, "wb"))
 
-    def plot_trace(self, val):
-        plot_traces = True
-        if plot_traces:
-            import pylab
-            pylab.figure()
-            pylab.plot(val)
-            pylab.ylabel('Vm (mV)')
-            pylab.show()
+    def plot_trace(self, val, name='trace', ylabel='Vm (mV)', save=False):
+        plt.plot(val)
+        plt.ylabel(ylabel)
+        plt.xlabel('time (ms)')
 
-    def main(self, optimize=False):
+        print ('Saving figure: ', os.path.join(self.FIGURES_PATH, "{0}_plot.eps".format(name)))
 
-        """Main"""
+        if save:
+            plt.savefig(os.path.join(self.FIGURES_PATH, "{0}_plot.eps".format(name)))
+
+        if self.plot:
+            plt.show()
+
+    def load_parameters(self):
+        # Load sigmas
+        try:
+            sigmas = pickle.load(open(os.path.join(self.PARAMETERS_PATH, 'sigmas.pck'), 'r'))
+            self.sigmamin = sigmas['sigmamin']
+            self.sigmamax = sigmas['sigmamax']
+        except Exception as e:
+            print(e, "Doing with default values...")
+
+        # Load i_e0
+        try:
+            current = pickle.load(open(os.path.join(self.PARAMETERS_PATH, 'current_params.pck'), 'r'))
+            self.i_e0 = current['i_e0']
+        except Exception as e:
+            print(e, "Doing with default values...")
+
+    def plot_current_voltage(self):
+        plt.subplot(211)
+        self.plot_trace(self.recordings['voltage'], save=False)
+        plt.subplot(212)
+        self.plot_trace(self.recordings['current'], 'training_current_and_voltage_optimization', ylabel='I(nA)',
+                        save=True)
+        plt.clf()
+
+    def main(self, optimize=False, train_time=130000, test_time=21000, test_num=5):
+        """
+        :param optimize:
+        :param train_time:
+        :param test_time:
+        :param test_num:
+        :return:
+        """
+
+
+        #Change working directory to model directory
+        OLD_DIR = os.path.dirname(os.path.realpath(__file__))
+        os.chdir(self.MODEL_PATH)
+        os.system('cd ' + self.MODEL_PATH)
+        #Check if mechanisms are compiled
+        print(os.system('pwd'))
+
         self.optimize = optimize
         init_simulation()
         self.cell = self.create_cell(add_synapses=False)
@@ -325,16 +410,17 @@ class Simulator:
         neuron.h.tstop = self.time
         neuron.h.cvode_active(0)
         if optimize:
-            self.brute_optimize_sigma()
-            self.brute_optimize_ie()
-            self.plot_trace(np.array(self.recordings['voltage']))
-            self.plot_trace(np.array(self.recordings['current']))
+            #self.brute_optimize_sigma(sigmas_output=os.path.join(self.PARAMETERS_PATH, 'sigmas.pck'))
+            self.brute_optimize_ie(current_params_output=os.path.join(self.PARAMETERS_PATH, 'current_params.pck'))
+            plt.subplot(211)
+            self.plot_current_voltage()
         else:
-            self.run_step(130000)
-            n = 0
-            while n < 5:
-                self.run_step(21000)
-                n += 1
+            self.load_parameters()
+            self.run_step(train_time, True)
+            self.plot_current_voltage()
 
+            for n in range(test_num):
+                self.run_step(test_time, False)
 
-Simulator().main(optimize=False)
+        #Change back to working directory
+        os.chdir(OLD_DIR)
